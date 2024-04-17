@@ -1,108 +1,108 @@
 "use client"
 
 import React, { useState } from 'react';
-import { InputWithButton } from './UserInput';
-import axios from 'axios';
+import { ProfileForm } from './ProfileForm';
+import { DatasetForm } from './DatasetForm';
 
 const Setup = () => {
-  const [apikey, setApiKey] = useState('');
-  const [email, setEmail] = useState('');
-  const [longitude, setLongitude] = useState('');
-  const [latitude, setLatitude] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [datasetOptions, setDatasetOptions] = useState<string[]>([]);
+  const [years, setYears] = useState<string[][]>([]);
+  const [intervals, setIntervals] = useState<string[][]>([]);
+  const [apiKey_selected, setApikey] = useState<string>('');
+  const [latitude_selected, setLatitude] = useState<string>('');
+  const [longitude_selected, setLongitude] = useState<string>('');
+  const [urls, setUrls] = useState<string[]>([]);
 
-  const handleNameInput = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    setApiKey(event.target.value ?? '');
-  };
+  const handleProfileFormSubmit = (data: {
+    apiKey: string;
+    email: string;
+    latitude: string;
+    longitude: string;
+  }) => {
+    const { apiKey, email, latitude, longitude } = data;
 
-  const handleEmailInput = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    setEmail(event.target.value ?? '');
-  };
+    // Handle the form submission
+    console.log('Form submitted with data:', data);
 
-  const handleLongitudeInput = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    setLongitude(event.target.value ?? '');
-  };
+    setApikey(apiKey);
+    setLatitude(latitude);
+    setLongitude(longitude);
 
-  const handleLatitudeInput = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    setLatitude(event.target.value ?? '');
-  };
-
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>): void => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      handleSubmit();
-    }
-  };
-
-  const handleSubmit = (): void => {
-    setLoading(true);
-
-    const data = {
-      apikey,
-      email,
-      latitude,
-      longitude,
-    };
-
-    axios.post('/get_available_datasets', data)
-      .then(response => {
-        const { dataset_options, years, intervals } = response.data;
-        // Handle the response data, e.g., store it in state or navigate to the next page
+    // Make the API request to the Python backend
+    fetch('http://127.0.0.1:5000/get_available_datasets', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        "apikey": apiKey,
+        "email": email,
+        "latitude": latitude,
+        "longitude": longitude,
+      }),
+    })
+      .then((response) => response.json())
+      .then((responseData) => {
+        const { dataset_options, years, intervals, download_url } = responseData;
         console.log('Dataset Options:', dataset_options);
         console.log('Years:', years);
         console.log('Intervals:', intervals);
+        console.log('Download URLs:', download_url)
+
+        setDatasetOptions(dataset_options);
+        setYears(years);
+        setIntervals(intervals);
+        setUrls(download_url);
+        
       })
-      .catch(error => {
-        // Handle the error
+      .catch((error) => {
         console.error('Error:', error);
+      });
+  };
+
+  const handleDatasetFormSubmit = (data: {
+    selectedDataset: string;
+    selectedYears: string[];
+    selectedIntervals: string[];
+  }) => {
+    const { selectedDataset, selectedYears, selectedIntervals } = data;
+
+    fetch('http://127.0.0.1:5000/run_script', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        dataset: selectedDataset,
+        years: selectedYears,
+        intervals: selectedIntervals,
+        api_key: apiKey_selected,
+        latitude: latitude_selected,
+        longitude: longitude_selected,
+        urls: urls
+      }),
+    })
+      .then((response) => response.json())
+      .then((responseData) => {
+        console.log('Response:', responseData);
       })
-      .finally(() => {
-        setLoading(false);
+      .catch((error) => {
+        console.error('Error:', error);
       });
   };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
-      <div className="mb-4">
-        <InputWithButton
-          value={apikey}
-          onChange={handleNameInput}
-          onKeyDown={handleKeyDown}
-          onSubmit={handleSubmit}
-          loading={loading}
-          placeholder="Enter your name"
+      {datasetOptions.length === 0 ? (
+        <ProfileForm onSubmit={handleProfileFormSubmit} />
+      ) : (
+        <DatasetForm
+          onSubmit={handleDatasetFormSubmit}
+          datasetOptions={datasetOptions}
+          years={years}
+          intervals={intervals}
         />
-      </div>
-      <div className="mb-4">
-        <InputWithButton
-          value={email}
-          onChange={handleEmailInput}
-          onKeyDown={handleKeyDown}
-          onSubmit={handleSubmit}
-          loading={loading}
-          placeholder="Enter your email"
-        />
-      </div>
-      <div className="mb-4">
-        <InputWithButton
-          value={longitude}
-          onChange={handleLongitudeInput}
-          onKeyDown={handleKeyDown}
-          onSubmit={handleSubmit}
-          loading={loading}
-          placeholder="Enter longitude"
-        />
-      </div>
-      <div>
-        <InputWithButton
-          value={latitude}
-          onChange={handleLatitudeInput}
-          onKeyDown={handleKeyDown}
-          onSubmit={handleSubmit}
-          loading={loading}
-          placeholder="Enter latitude"
-        />
-      </div>
+      )}
     </div>
   );
 };

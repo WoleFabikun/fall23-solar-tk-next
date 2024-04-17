@@ -1,6 +1,7 @@
 import shutil
 import time
 from flask import Flask, jsonify, request, render_template
+from flask_cors import CORS
 import requests
 import pandas as pd
 import math
@@ -10,6 +11,7 @@ from zipfile import ZipFile
 from sunpos import sunpos
 
 app = Flask(__name__)
+CORS(app)
 
 TEMP_DIR = os.path.join(os.path.expanduser("~"), "temp")
 SOLAR_DATA_DIR = os.path.join(TEMP_DIR, "solar_data")
@@ -20,7 +22,6 @@ if not os.path.exists(SOLAR_DATA_DIR):
     os.mkdir(SOLAR_DATA_DIR)
 
 BASE_URL = "https://developer.nrel.gov/api/nsrdb/v2/solar/psm3-5min-download.json?"
-DOWNLOAD_URL = {}
 
 class SolarTKMaxPowerCalculator:
     def __init__(self, tilt, orientation, dc_system_size, k=1.0, c=0.05, t_baseline=25):
@@ -121,7 +122,7 @@ def cleanup(dir):
 
 
 #take year as an an additional input
-def fetch_download_url(dataset_url, attributes, interval, latitude, longitude, year):
+def fetch_download_url(dataset_url, attributes, interval, latitude, longitude, year, api_key):
     input_data = {
         'attributes': attributes,
         'interval': interval,
@@ -129,7 +130,6 @@ def fetch_download_url(dataset_url, attributes, interval, latitude, longitude, y
         "leap_day": "false",
         'wkt': 'POINT({:.4f} {:.4f})'.format(longitude, latitude),
         'api_key': api_key,
-        'email': email,
         'names': int(year)
     }
     headers = {'x-api-key': api_key}
@@ -137,13 +137,13 @@ def fetch_download_url(dataset_url, attributes, interval, latitude, longitude, y
     response_data = get_response_json_and_handle_errors(requests.post(dataset_url, input_data, headers=headers))
     return response_data['outputs']['downloadUrl']
 
-def download_and_process_data(dataset_url, latitude, longitude, data_types, years, interval, tilt, orientation, dc_system_size):
+def download_and_process_data(dataset_url, latitude, longitude, data_types, years, interval, api_key, tilt, orientation, dc_system_size):
     all_data_frames = []
 
     for year in years:
         # year.replace(" ", "")
         # Generate download URL for each year
-        download_url = fetch_download_url(dataset_url, data_types, interval, latitude, longitude, year)
+        download_url = fetch_download_url(dataset_url, data_types, interval, latitude, longitude, year, api_key)
         zip_file_path = os.path.join(TEMP_DIR, "solar_data_{}.zip".format(year))
         time.sleep(5)
         download_file(download_url, zip_file_path)
@@ -174,24 +174,17 @@ def download_and_process_data(dataset_url, latitude, longitude, data_types, year
 def generate_csv_url(csv_path):
     return F"{TEMP_DIR}/{csv_path}"
 
-# (your Flask routes)
-email = ""
-api_key = ""
-latitude = ""
-longitude = ""
-
-@app.route('/')
-def input_coordinates():
-    return render_template('input.html')
 
 
 
 @app.route('/get_available_datasets', methods=['POST'])
 def get_available_datasets():
     email = request.json.get('email')
-    api_key = request.json.get('api_key')
+    api_key = request.json.get('apikey')
     latitude = request.json.get('latitude')
     longitude = request.json.get('longitude')
+
+    DOWNLOAD_URL = {}
 
     if not latitude or not longitude:
         return jsonify({'error': 'Invalid Latitude and/or Longitude'}), 400
@@ -223,34 +216,28 @@ def get_available_datasets():
         return jsonify({
             'dataset_options': dataset_options,
             'years': years,
-            'intervals': intervals
+            'intervals': intervals,
+            'download_url': DOWNLOAD_URL
         })
 
     except requests.RequestException as e:
         return jsonify({'error': str(e)}), 500
-    
-@app.route('/get_data', methods=['POST'])
-def get_data():
-    try:
-        dataset = request.form.get('dataset')
-        interval = request.form.get('interval')
-
-        render_template('index.html', dataset=dataset, interval=interval)
-
-    except requests.RequestException as e:
-        return render_template('error.html', error_message=str(e))
 
 # Alter the fetch_download_url function to accept a dataset parameter
 @app.route('/run_script', methods=['POST'])
 def execute_script(): 
     try:
-        years = request.form.getlist('years') 
-        data_types = request.form.getlist('data_types')
-        interval = request.form.get('interval')
+        years = request.json.get('years') 
+        dataset = request.json.get('dataset')
+        interval = request.json.get('interval')
+        latitude = request.json.get('latitude')
+        longitude = request.json.get('longitude')
+        api_key = request.json.get('api_key')
+        urls = request.json.get('urls')
 
-        # convert data_types to a comma separated string(API requires this)
+        # convert dataset to a comma separated string(API requires this)
         attributes = ""
-        for data_type in data_types:
+        for data_type in dataset:
             attributes += data_type + ","
 
         # add ghi, dni, solar zenith angle, and temperature to attributes
@@ -258,12 +245,11 @@ def execute_script():
 
         #if you are choosing multiple years then the link for each year will need to be adjusted
         for year in years:
-            year = str(year)
             year.replace(" ", "")
             # Generate download URL for each year
-            url = DOWNLOAD_URL[year]
+            currURL = urls[year]
 
-            download_url = fetch_download_url(url, attributes, interval, latitude, longitude, year)
+            download_url = fetch_download_url(currURL, attributes, interval, latitude, longitude, year, api_key)
             zip_file_path = os.path.join(TEMP_DIR, "solar_data_{}.zip".format(year))
             download_file(download_url, zip_file_path)
             unzip_file(zip_file_path, SOLAR_DATA_DIR)
@@ -291,9 +277,8 @@ def execute_script():
 
         return "Solar data request executed successfully."
 
-    except Exception as e:
-        error_message = f"An error occurred: {str(e)}"
-        return render_template('error.html', error_message=str(e)) 
+    except requests.RequestException as e:
+        return jsonify({'error': str(e)}), 500
     
 def get_response_json_and_handle_errors(response):
     if response.status_code != 200:

@@ -1,64 +1,62 @@
 "use client"
 
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-
-import { Button } from "@/components/ui/button"
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 
 const formSchema = z.object({
-  apikey: z.string({
-    required_error: "API Key is required.",
+  apiKey: z.string().min(2, {
+    message: "API key must be at least 2 characters.",
   }),
   email: z.string().email({
     message: "Please enter a valid email address.",
   }),
-  latitude: z.number({
+  latitude: z.string({
     required_error: "Latitude is required.",
   }),
-  longitude: z.number({
+  longitude: z.string({
     required_error: "Longitude is required.",
   }),
-})
+});
 
-export function ProfileForm() {
-  const form = useForm<z.infer<typeof formSchema>>({
+type ProfileFormValues = z.infer<typeof formSchema>;
+
+type ProfileFormProps = {
+  onSubmit: (data: ProfileFormValues) => void;
+};
+
+export function ProfileForm({ onSubmit }: ProfileFormProps) {
+  const form = useForm<ProfileFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      apikey: "",
+      apiKey: "",
       email: "",
-      latitude: 0,
-      longitude: 0,
+      latitude: "",
+      longitude: "",
     },
-  })
-
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    // Handle form submission
-    console.log(values)
-  }
+  });
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen">
-          <Form {...form}>
+    <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <FormField
           control={form.control}
-          name="apikey"
+          name="apiKey"
           render={({ field }) => (
             <FormItem>
               <FormLabel>API Key</FormLabel>
               <FormControl>
-                <Input placeholder="Your api key" {...field} />
+                <Input placeholder="Your API key" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -84,7 +82,7 @@ export function ProfileForm() {
             <FormItem>
               <FormLabel>Latitude</FormLabel>
               <FormControl>
-                <Input placeholder="Latitude" type="number" {...field} />
+                <Input placeholder="Latitude" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -97,7 +95,7 @@ export function ProfileForm() {
             <FormItem>
               <FormLabel>Longitude</FormLabel>
               <FormControl>
-                <Input placeholder="Longitude" type="number" {...field} />
+                <Input placeholder="Longitude" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -106,6 +104,5 @@ export function ProfileForm() {
         <Button type="submit">Submit</Button>
       </form>
     </Form>
-    </div>
-  )
+  );
 }
