@@ -122,7 +122,7 @@ def cleanup(dir):
 
 
 #take year as an an additional input
-def fetch_download_url(dataset_url, attributes, interval, latitude, longitude, year, api_key):
+def fetch_download_url(dataset_url, attributes, interval, latitude, longitude, year, api_key, email):
     input_data = {
         'attributes': attributes,
         'interval': interval,
@@ -130,20 +130,22 @@ def fetch_download_url(dataset_url, attributes, interval, latitude, longitude, y
         "leap_day": "false",
         'wkt': 'POINT({:.4f} {:.4f})'.format(longitude, latitude),
         'api_key': api_key,
-        'names': int(year)
+        'names': int(year),
+        'email': email
     }
     headers = {'x-api-key': api_key}
     # response = requests.post(BASE_URL, input_data, headers=headers)
-    response_data = get_response_json_and_handle_errors(requests.post(dataset_url, input_data, headers=headers))
+    response_data = requests.post(dataset_url, input_data, headers=headers)
+    response_data = get_response_json_and_handle_errors(response_data)
     return response_data['outputs']['downloadUrl']
 
-def download_and_process_data(dataset_url, latitude, longitude, data_types, years, interval, api_key, tilt, orientation, dc_system_size):
+def download_and_process_data(dataset_url, latitude, longitude, data_types, years, interval, api_key, email, tilt, orientation, dc_system_size):
     all_data_frames = []
 
     for year in years:
         # year.replace(" ", "")
         # Generate download URL for each year
-        download_url = fetch_download_url(dataset_url, data_types, interval, latitude, longitude, year, api_key)
+        download_url = fetch_download_url(dataset_url, data_types, interval, latitude, longitude, year, api_key, email)
         zip_file_path = os.path.join(TEMP_DIR, "solar_data_{}.zip".format(year))
         time.sleep(5)
         download_file(download_url, zip_file_path)
@@ -173,7 +175,6 @@ def download_and_process_data(dataset_url, latitude, longitude, data_types, year
 
 def generate_csv_url(csv_path):
     return F"{TEMP_DIR}/{csv_path}"
-
 
 
 
@@ -214,6 +215,7 @@ def get_available_datasets():
                     DOWNLOAD_URL[link['year']] = link['link']
 
         return jsonify({
+            "data": data,
             'dataset_options': dataset_options,
             'years': years,
             'intervals': intervals,
@@ -234,26 +236,22 @@ def execute_script():
         longitude = request.json.get('longitude')
         api_key = request.json.get('api_key')
         urls = request.json.get('urls')
-
-        # convert dataset to a comma separated string(API requires this)
-        attributes = ""
-        for data_type in dataset:
-            attributes += data_type + ","
+        email = request.json.get('email')
 
         # add ghi, dni, solar zenith angle, and temperature to attributes
-        attributes += "ghi,dni,solar_zenith_angle,air_temperature"
+        attributes = "ghi,dni,solar_zenith_angle,air_temperature"
 
         #if you are choosing multiple years then the link for each year will need to be adjusted
         for year in years:
             year.replace(" ", "")
             # Generate download URL for each year
             currURL = urls[year]
+            currURL = currURL.replace("yourapikey", api_key)
+            currURL = currURL.replace("youremail", email)
 
-            download_url = fetch_download_url(currURL, attributes, interval, latitude, longitude, year, api_key)
-            zip_file_path = os.path.join(TEMP_DIR, "solar_data_{}.zip".format(year))
-            download_file(download_url, zip_file_path)
-            unzip_file(zip_file_path, SOLAR_DATA_DIR)
-        
+            # download_url = fetch_download_url(currURL, attributes, interval, latitude, longitude, year, api_key, email)
+            download_file(currURL, os.path.join(TEMP_DIR, "solar_data_{}.csv".format(year)))
+
         # (data processing code)
         df = load_and_concatenate_csvs(SOLAR_DATA_DIR)
         df['datetime'] = pd.to_datetime(df[['Year', 'Month', 'Day', 'Hour', 'Minute']])

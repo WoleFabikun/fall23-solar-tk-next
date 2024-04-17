@@ -12,6 +12,7 @@ const Setup = () => {
   const [latitude_selected, setLatitude] = useState<string>('');
   const [longitude_selected, setLongitude] = useState<string>('');
   const [urls, setUrls] = useState<string[]>([]);
+  const [email, setEmail] = useState<string>('');
 
   const handleProfileFormSubmit = (data: {
     apiKey: string;
@@ -43,16 +44,18 @@ const Setup = () => {
     })
       .then((response) => response.json())
       .then((responseData) => {
-        const { dataset_options, years, intervals, download_url } = responseData;
+        const { data, dataset_options, years, intervals, download_url } = responseData;
         console.log('Dataset Options:', dataset_options);
         console.log('Years:', years);
         console.log('Intervals:', intervals);
+        console.log('RESPONSE:', data)
         console.log('Download URLs:', download_url)
 
         setDatasetOptions(dataset_options);
         setYears(years);
         setIntervals(intervals);
         setUrls(download_url);
+        setEmail(email);
         
       })
       .catch((error) => {
@@ -77,9 +80,10 @@ const Setup = () => {
         years: selectedYears,
         intervals: selectedIntervals,
         api_key: apiKey_selected,
-        latitude: latitude_selected,
-        longitude: longitude_selected,
-        urls: urls
+        latitude: parseFloat(latitude_selected),
+        longitude: parseFloat(longitude_selected),
+        urls: urls,
+        email: email,
       }),
     })
       .then((response) => response.json())
