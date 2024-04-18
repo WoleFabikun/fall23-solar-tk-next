@@ -1,77 +1,57 @@
-# Green Thumb Guide
+# Solar Data Retrieval and Analysis
 
-Green Thumb Guide is a full-stack application designed to help plant enthusiasts access personalized plant care advice and video recommendations. By leveraging cutting-edge technologies such as Next.js, TypeScript, Flask, VideoDB, VideoDBRetriever, and a Retrieval-Augmented Generation (RAG) pipeline with LlamaIndex, the application provides a seamless user experience and delivers accurate, tailored information to users.
-
-This project serves as a proof of concept for adapting RAG models to video content. With this repository and your own VideoDB API key, you can upload any videos of your choice and create your own personalized video retrieving bot. The application demonstrates how RAG models can be effectively utilized to retrieve and present relevant video content based on user queries, enhancing the overall user experience.
+This project aims to retrieve solar data from the National Solar Radiation Database (NSRDB) API for a specific location on Earth and perform machine learning predictions using the obtained data. The project consists of a Flask backend that interacts with the NSRDB API and processes the retrieved solar data, and a frontend built with Next.js and React that provides a user interface for inputting location coordinates and selecting desired datasets.
 
 ## Features
 
-- Personalized plant care advice based on user input
-- Semantic search and retrieval of relevant video content
-- Retrieval-Augmented Generation (RAG) pipeline for enhanced query understanding
-- Scalable and modular architecture for future growth and feature enhancements
+- Retrieve solar data from the NSRDB API based on user-provided latitude and longitude coordinates.
+- Allow users to select specific datasets, years, and intervals for data retrieval.
+- Process the retrieved solar data using pandas and calculate solar generation potential using the SolarTKMaxPowerCalculator class.
+- Perform machine learning predictions based on the processed solar data (to be implemented).
+- Provide a user-friendly frontend interface for inputting location coordinates and selecting datasets.
 
-## Tech Stack
+## Prerequisites
 
-- **Frontend**: Next.js, TypeScript
-- **Backend**: Flask
-- **Database**: VideoDB
-- **Search and Retrieval**: VideoDBRetriever, LlamaIndex
-- **Architecture**: RAG pipeline
+To run this project locally, you need to have the following installed:
+
+- Python 3.x
+- Node.js
+- bun 
 
 ## Getting Started
 
-### Prerequisites
+Clone the repository:
 
-- Node.js (v14 or above)
-- Python (v3.7 or above)
-- Bun (optional, for faster installation and bundling)
+    git clone https://github.com/your-username/fall23-solar-tk-next.git
 
-### Installation
+Install the required Python dependencies:
 
-```bash
-git clone https://github.com/YourUsername/green-thumb-guide.git
-cd green-thumb-guide
-cd client
-//(or npm)
-bun install 
-cd ../server
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
+    cd server
+    conda install -r requirements.txt
 
+Install the required frontend dependencies:
 
-Set up environment variables:
+    cd client
+    bun install
 
-- Create a `.env` file in the root directory
-- Add the required environment variables. You will need an [OPENAI api key](https://openai.com/blog/openai-api) and a [VideoDB api key](https://videodb.io/)
+Obtain an API key from the NSRDB API [here](https://developer.nrel.gov/signup/)
 
-Start the development server:
+Start the Flask backend server:
 
-Be sure to have the flask backend running.
-```bash
-// (or npm run dev)
-bun dev 
-```
-Open your browser and navigate to `http://localhost:3000`
+    cd ..
+    python proto.py
 
-## Contributing
+In a separate terminal, start the Next.js frontend development server:
 
-Contributions are welcome! If you'd like to contribute, please follow these steps:
+    cd client
+    bun dev
 
-1. Fork the repository
-2. Create a new branch for your feature or bug fix
-3. Make your changes and commit them with descriptive messages
-4. Push your changes to your forked repository
-5. Submit a pull request to the main repository
+Open your web browser and navigate to http://localhost:3000 to access the frontend interface.
 
-## License
+## Usage
 
-This project is licensed under the [MIT License](LICENSE).
-
-## Contact
-
-If you have any questions, suggestions, or feedback, please feel free to reach out:
-
-- Email: wole359@gmail.com
+- On the frontend interface, enter email, NSRDB api key, latitude, and longitude coordinates of the desired location.
+- Select the desired dataset, years, and intervals for data retrieval.
+- Click the "Submit" button to initiate the data retrieval process.
+- The backend server will retrieve the solar data from the NSRDB API, process it, and perform machine learning predictions (to be implemented).
+- The results will be displayed on the frontend interface (to be implemented).
