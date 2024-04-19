@@ -186,10 +186,10 @@ def get_available_datasets():
     longitude = request.json.get('longitude')
 
     DOWNLOAD_URL = {}
-
+    
     if not latitude or not longitude:
         return jsonify({'error': 'Invalid Latitude and/or Longitude'}), 400
-
+    
     wkt = f'POINT({longitude} {latitude})'
     NREL_API_URL = f'https://developer.nrel.gov/api/solar/nsrdb_data_query.json?api_key={api_key}'
 
