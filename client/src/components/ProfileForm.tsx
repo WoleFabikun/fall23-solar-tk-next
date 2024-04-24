@@ -13,6 +13,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { AnimatedBorder } from "./AnimatedBorder";
 
 const formSchema = z.object({
   apiKey: z.string().min(2, {
@@ -33,21 +34,27 @@ type ProfileFormValues = z.infer<typeof formSchema>;
 
 type ProfileFormProps = {
   onSubmit: (data: ProfileFormValues) => void;
+  defaultLatitude?: {latitude: string, longitude: string};
+  defaultLongitude?: string;
+  loading?: boolean;
 };
 
-export function ProfileForm({ onSubmit }: ProfileFormProps) {
+export function ProfileForm({ onSubmit, defaultLatitude, defaultLongitude, loading }: ProfileFormProps) {
+  console.log("LATTYYYYY",defaultLatitude);
+  console.log("LONGYYYYY",defaultLongitude);
+  console.log("LOADING",loading);
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       apiKey: "",
       email: "",
-      latitude: "",
-      longitude: "",
+      latitude: defaultLatitude.latitude ? defaultLatitude.latitude : "",
+      longitude: defaultLatitude.longitude ? defaultLatitude.longitude :"",
     },
   });
 
   return (
-    <Form {...form}>
+          <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 ">
         <FormField
           control={form.control}
@@ -56,9 +63,11 @@ export function ProfileForm({ onSubmit }: ProfileFormProps) {
             <FormItem>
               <FormLabel>API Key</FormLabel>
               <FormControl>
-                <Input placeholder="Your API key..." {...field} 
-                style={{ width: '500px' }}
-                />
+                <AnimatedBorder enabled={loading}>
+                  <Input placeholder="Your API key..." {...field} 
+                  style={{ width: '400px' }}
+                  />
+                </AnimatedBorder>
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -71,7 +80,9 @@ export function ProfileForm({ onSubmit }: ProfileFormProps) {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
+              <AnimatedBorder enabled={loading}>
                 <Input placeholder="Your email..." {...field} />
+              </AnimatedBorder>
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -84,7 +95,9 @@ export function ProfileForm({ onSubmit }: ProfileFormProps) {
             <FormItem>
               <FormLabel>Latitude</FormLabel>
               <FormControl>
-                <Input placeholder="Enter Latitude..." {...field} />
+                <AnimatedBorder enabled={loading}>
+                  <Input placeholder="Enter Latitude..." {...field} />
+                </AnimatedBorder>
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -97,7 +110,9 @@ export function ProfileForm({ onSubmit }: ProfileFormProps) {
             <FormItem>
               <FormLabel>Longitude</FormLabel>
               <FormControl>
-                <Input placeholder="Enter Longitude..." {...field} />
+                <AnimatedBorder enabled={loading}>
+                  <Input placeholder="Enter Longitude..." {...field} />
+                </AnimatedBorder>
               </FormControl>
               <FormMessage />
             </FormItem>

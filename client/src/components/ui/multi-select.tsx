@@ -60,6 +60,7 @@ interface MultiSelectFormFieldProps
   disabled?: boolean;
   placeholder: string;
   className?: string;
+  loading?: boolean;
   animation?: number;
   onValueChange: (value: string[]) => void;
 }
@@ -71,6 +72,7 @@ const MultiSelectFormField = React.forwardRef<
   (
     {
       className,
+      loading,
       variant,
       asChild = false,
       options,
@@ -78,7 +80,7 @@ const MultiSelectFormField = React.forwardRef<
       onValueChange,
       disabled,
       placeholder,
-      animation = 0,
+      animation = 1,
       ...props
     },
     ref
@@ -138,7 +140,7 @@ const MultiSelectFormField = React.forwardRef<
                       <Badge
                         key={value}
                         className={cn(
-                          isAnimating ? "animate-bounce" : "",
+                          loading ? "animate-bounce" : "",
                           multiSelectVariants({ variant, className })
                         )}
                         style={{
@@ -278,15 +280,6 @@ const MultiSelectFormField = React.forwardRef<
             </CommandList>
           </Command>
         </PopoverContent>
-        {animation > 0 && selectedValues.length > 0 && (
-          <WandSparkles
-            className={cn(
-              "cursor-pointer my-2 text-foreground bg-background w-3 h-3",
-              isAnimating ? "" : "text-muted-foreground"
-            )}
-            onClick={() => setIsAnimating(!isAnimating)}
-          />
-        )}
       </Popover>
     );
   }

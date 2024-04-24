@@ -8,7 +8,7 @@ import Globe from "@/components/Globe"
 export default async function Page() {
   return (
     <div className="flex-1 h-[calc(100dvh-64px)]">
-            <div className="flex md:flex-row flex-col relative items-center md:justify-between md:mb-12 ">
+            <div className="flex md:flex-row flex-col relative items-center md:justify-between md:mb-12 mt-8 md:mt-0">
               <div className="text-left md:p-0 rounded-xl z-10">
                 <div className="relative z-50 md:mt-24 xl:mt-32 md:max-w-[780px] xl:max-w-[940px] mb-8">
                   <h1 className="text-3xl md:text-5xl xl:text-6xl font-fitzgeraldBold mb-2 md:mb-4 w-full max-w-[90%] leading-9">

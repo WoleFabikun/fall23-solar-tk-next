@@ -1,13 +1,17 @@
 "use client"
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import Globe from 'react-globe.gl';
 import * as THREE from 'three';
+import { useRouter } from 'next/navigation';
+
 
 const GlobeComponent = () => {
   const globeEl = useRef(null);
+  const router = useRouter(); // Directly use useRouter here
 
   useEffect(() => {
+
     const globe = globeEl.current;
 
     // Auto-rotate
@@ -41,6 +45,11 @@ const GlobeComponent = () => {
     backgroundColor={"#ff004800"}
     height={600}
     width={500}
+    onGlobeClick={({lat, lng}) => {
+      {
+        console.log('Clicked at latitude:', lat, 'longitude:', lng);
+        router.push(`/start?latitude=${lat}&longitude=${lng}`);
+    }}}
   />;
 };
 

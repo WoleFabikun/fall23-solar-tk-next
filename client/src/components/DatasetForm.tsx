@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import MultiSelectFormField from "@/components/ui/multi-select";
+import { AnimatedBorder } from "./AnimatedBorder";
 
 const formSchema = z.object({
   selectedDataset: z.string(),
@@ -32,6 +33,7 @@ type DatasetFormProps = {
   datasetOptions: string[];
   years: (number | string)[][];
   intervals: (number | string)[][];
+  loading: boolean;
 };
 
 export function DatasetForm({
@@ -39,6 +41,7 @@ export function DatasetForm({
   datasetOptions,
   years,
   intervals,
+  loading
 }: DatasetFormProps) {
   const form = useForm<DatasetFormValues>({
     resolver: zodResolver(formSchema),
@@ -73,20 +76,23 @@ export function DatasetForm({
           control={form.control}
           name="selectedDataset"
           render={({ field }) => (
-            <FormItem>
+            <FormItem style={{ width: '400px' }}>
               <FormLabel>Dataset</FormLabel>
               <Select onValueChange={field.onChange}>
+                <AnimatedBorder enabled={loading}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a dataset" />
                   </SelectTrigger>
                 </FormControl>
-                <SelectContent>
+                </AnimatedBorder>
+                <SelectContent >
                   {datasetOptions.map((option) => (
                     <SelectItem key={option} value={option}>
                       {option}
                     </SelectItem>
                   ))}
+                  
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -103,6 +109,7 @@ export function DatasetForm({
                 options={yearOptions}
                 placeholder="Select years"
                 onValueChange={field.onChange}
+                loading={loading}
               />
               <FormMessage />
             </FormItem>
@@ -118,6 +125,7 @@ export function DatasetForm({
                 options={intervalOptions}
                 placeholder="Select intervals"
                 onValueChange={field.onChange}
+                loading={loading}
               />
               <FormMessage />
             </FormItem>

@@ -1,10 +1,11 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ProfileForm } from './ProfileForm';
 import { DatasetForm } from './DatasetForm';
+import { set } from 'react-hook-form';
 
-const Setup = () => {
+const Setup = (globe_latitude, globe_longitude) => {
   const [datasetOptions, setDatasetOptions] = useState<string[]>([]);
   const [years, setYears] = useState<string[][]>([]);
   const [intervals, setIntervals] = useState<string[][]>([]);
@@ -13,6 +14,14 @@ const Setup = () => {
   const [longitude_selected, setLongitude] = useState<string>('');
   const [urls, setUrls] = useState<string[]>([]);
   const [email, setEmail] = useState<string>('');
+  const [loading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (globe_latitude && globe_longitude) {
+      setLatitude(globe_latitude);
+      setLongitude(globe_longitude);
+    }
+  }, [globe_latitude, globe_longitude]);
 
   const handleProfileFormSubmit = (data: {
     apiKey: string;
@@ -28,6 +37,7 @@ const Setup = () => {
     setApikey(apiKey);
     setLatitude(latitude);
     setLongitude(longitude);
+    setIsLoading(true);
 
     // Make the API request to the Python backend
     fetch('http://127.0.0.1:5000/get_available_datasets', {
@@ -44,6 +54,7 @@ const Setup = () => {
     })
       .then((response) => response.json())
       .then((responseData) => {
+        setIsLoading(false);
         const { data, dataset_options, years, intervals, download_url } = responseData;
         console.log('Dataset Options:', dataset_options);
         console.log('Years:', years);
@@ -60,6 +71,7 @@ const Setup = () => {
       })
       .catch((error) => {
         console.error('Error:', error);
+        setIsLoading(false);
       });
   };
 
@@ -69,6 +81,7 @@ const Setup = () => {
     selectedIntervals: string[];
   }) => {
     const { selectedDataset, selectedYears, selectedIntervals } = data;
+    setIsLoading(true);
 
     fetch('http://127.0.0.1:5000/run_script', {
       method: 'POST',
@@ -89,22 +102,30 @@ const Setup = () => {
       .then((response) => response.json())
       .then((responseData) => {
         console.log('Response:', responseData);
+        setIsLoading(false);
       })
       .catch((error) => {
         console.error('Error:', error);
+        setIsLoading(false);
       });
   };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen">
       {datasetOptions.length === 0 ? (
-        <ProfileForm onSubmit={handleProfileFormSubmit} />
+        <ProfileForm 
+        onSubmit={handleProfileFormSubmit} 
+        defaultLatitude ={globe_latitude} 
+        defaultLongitude ={globe_longitude}
+        loading = {loading}
+        />
       ) : (
         <DatasetForm
           onSubmit={handleDatasetFormSubmit}
           datasetOptions={datasetOptions}
           years={years}
           intervals={intervals}
+          loading={loading}
         />
       )}
     </div>

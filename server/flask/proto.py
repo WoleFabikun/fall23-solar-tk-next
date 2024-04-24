@@ -180,7 +180,6 @@ def generate_csv_url(csv_path):
 
 @app.route('/get_available_datasets', methods=['POST'])
 def get_available_datasets():
-    email = request.json.get('email')
     api_key = request.json.get('apikey')
     latitude = request.json.get('latitude')
     longitude = request.json.get('longitude')
@@ -204,15 +203,20 @@ def get_available_datasets():
 
         data = response.json()
 
+        print("DATA: ", data)
+
         # Extract dataset options from the response and turn into an array of dataset names
         dataset_options = [dataset['displayName'] for dataset in data.get('outputs', [])]
-        years = [dataset['availableYears'] for dataset in data.get('outputs')]
+        years = [[str(year) for year in dataset['availableYears']] for dataset in data.get('outputs')]
         intervals = [dataset['availableIntervals'] for dataset in data.get('outputs', [])]
 
+        print("Years: ", years)
+
         for dataset in data.get('outputs'):
-            if isinstance(dataset['availableYears'][0], int):
                 for link in dataset['links']:
-                    DOWNLOAD_URL[link['year']] = link['link']
+                    DOWNLOAD_URL[str(link['year'])] = link['link']
+        
+        print("DOWNLOAD URL: ", DOWNLOAD_URL)
 
         return jsonify({
             "data": data,
@@ -237,6 +241,10 @@ def execute_script():
         api_key = request.json.get('api_key')
         urls = request.json.get('urls')
         email = request.json.get('email')
+
+        print("YEARS: ", years)
+
+        print("URLS: ", urls)
 
         # add ghi, dni, solar zenith angle, and temperature to attributes
         attributes = "ghi,dni,solar_zenith_angle,air_temperature"
