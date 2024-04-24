@@ -48,7 +48,7 @@ export function ProfileForm({ onSubmit }: ProfileFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 ">
         <FormField
           control={form.control}
           name="apiKey"
@@ -56,7 +56,9 @@ export function ProfileForm({ onSubmit }: ProfileFormProps) {
             <FormItem>
               <FormLabel>API Key</FormLabel>
               <FormControl>
-                <Input placeholder="Your API key" {...field} />
+                <Input placeholder="Your API key..." {...field} 
+                style={{ width: '500px' }}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -69,7 +71,7 @@ export function ProfileForm({ onSubmit }: ProfileFormProps) {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder="Your email" {...field} />
+                <Input placeholder="Your email..." {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -82,7 +84,7 @@ export function ProfileForm({ onSubmit }: ProfileFormProps) {
             <FormItem>
               <FormLabel>Latitude</FormLabel>
               <FormControl>
-                <Input placeholder="Latitude" {...field} />
+                <Input placeholder="Enter Latitude..." {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -95,7 +97,7 @@ export function ProfileForm({ onSubmit }: ProfileFormProps) {
             <FormItem>
               <FormLabel>Longitude</FormLabel>
               <FormControl>
-                <Input placeholder="Longitude" {...field} />
+                <Input placeholder="Enter Longitude..." {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import "./globals.css";
+import "../styles/globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider"
 import { ReactNode } from "react";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
-
-
+import { cn } from "@/lib/utils"
+import { defaultFontMapper } from "@/styles/fonts"
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,16 +22,17 @@ export default function RootLayout({
     <>
       <html lang="en" suppressHydrationWarning>
         <head />
-        <body>
+        <body className={cn(...Object.values(defaultFontMapper))}>
           <ThemeProvider
             attribute="class"
-            defaultTheme="system"
+            defaultTheme="dark"
             enableSystem
             disableTransitionOnChange
           >
             <Header />
-            {children}
-            <Footer />
+            <main className="container ">
+              {children}
+            </main>
           </ThemeProvider>
         </body>
       </html>
