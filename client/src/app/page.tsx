@@ -28,7 +28,7 @@ export default async function Page() {
                     GET STARTED
                   </Link>
                   <Link
-                    href="https://developer.nrel.gov/signup/"
+                    href="https://developer.nrel.gov/signup/" target="_blank"
                     className="px-4 py-3 text-xs self-end font-okineBold cursor-pointer hover:underline"
                   >
                     NSRDB API Key
