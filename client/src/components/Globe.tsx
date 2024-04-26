@@ -19,7 +19,7 @@ const GlobeComponent = () => {
     globe.controls().autoRotateSpeed = 0.35;
 
     // Add clouds sphere
-    const CLOUDS_IMG_URL = '/clouds.png'; // Ensure this path is correct in your public directory
+    const CLOUDS_IMG_URL = '/clouds.png';
     const CLOUDS_ALT = 0.004;
     const CLOUDS_ROTATION_SPEED = -0.006; // deg/frame
 

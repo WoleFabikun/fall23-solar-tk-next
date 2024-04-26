@@ -24,7 +24,7 @@ if not os.path.exists(SOLAR_DATA_DIR):
 BASE_URL = "https://developer.nrel.gov/api/nsrdb/v2/solar/psm3-5min-download.json?"
 
 class SolarTKMaxPowerCalculator:
-    def __init__(self, tilt, orientation, dc_system_size, k=1.0, c=0.05, t_baseline=25):
+    def __init__(self, tilt=40, orientation=180, dc_system_size=15, k=1.0, c=0.05, t_baseline=25):
         self.tilt_ = math.radians(tilt)
         self.orientation = math.radians(orientation)
         self.dc_system_size = dc_system_size
@@ -48,6 +48,7 @@ class SolarTKMaxPowerCalculator:
         return sun_positions
     
     def compute_max_power(self, df, sun_position):
+        print("DATAFRAME", df)
         clearsky_irradiance = df.copy()
         # make the index a column called 'datetime'
         clearsky_irradiance.reset_index(inplace=True)
@@ -83,11 +84,9 @@ def query_datasets(api_key, latitude, longitude):
 #code from the CSV prcoessing
 def load_and_concatenate_csvs(folder):
     df_list = []
-    for nested_folder in os.listdir(folder):
-        nested_path = os.path.join(folder, nested_folder)
-        for file in os.listdir(nested_path):
+    for file in os.listdir(folder):
             if file.endswith('.csv'):
-                csv_path = os.path.join(nested_path, file)
+                csv_path = os.path.join(folder, file)
                 skip = 2
                 # open the csv at csv_path using pandas
                 df = pd.read_csv(csv_path, skiprows=skip)
@@ -122,9 +121,8 @@ def cleanup(dir):
 
 
 #take year as an an additional input
-def fetch_download_url(dataset_url, attributes, interval, latitude, longitude, year, api_key, email):
+def fetch_download_url(dataset_url, interval, latitude, longitude, year, api_key, email):
     input_data = {
-        'attributes': attributes,
         'interval': interval,
         'to_utc': 'false',
         "leap_day": "false",
@@ -242,12 +240,9 @@ def execute_script():
         urls = request.json.get('urls')
         email = request.json.get('email')
 
-        print("YEARS: ", years)
+        # print("YEARS: ", years)
 
-        print("URLS: ", urls)
-
-        # add ghi, dni, solar zenith angle, and temperature to attributes
-        attributes = "ghi,dni,solar_zenith_angle,air_temperature"
+        # print("URLS: ", urls)
 
         #if you are choosing multiple years then the link for each year will need to be adjusted
         for year in years:
@@ -261,7 +256,7 @@ def execute_script():
             download_file(currURL, os.path.join(TEMP_DIR, "solar_data_{}.csv".format(year)))
 
         # (data processing code)
-        df = load_and_concatenate_csvs(SOLAR_DATA_DIR)
+        df = load_and_concatenate_csvs(os.path.join(os.path.expanduser("~"), "temp"))
         df['datetime'] = pd.to_datetime(df[['Year', 'Month', 'Day', 'Hour', 'Minute']])
         df.drop(['Year', 'Month', 'Day', 'Hour', 'Minute'], axis=1, inplace=True)
         df.set_index('datetime', inplace=True)
