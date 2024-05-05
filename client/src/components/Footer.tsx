@@ -1,7 +1,6 @@
 
 
 const Footer = () => {
-  //made it bottom sticky here
   return <footer className='py-6'>
     <div className='flex flex-col items-center justify-between'>
       <div className=' text-muted-foreground'>
