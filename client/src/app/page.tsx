@@ -1,7 +1,5 @@
-import Image from "next/image"
 import Link from "next/link"
 
-import { ScrollArea } from "@/components/ui/scroll-area"
 import Footer from "@/components/Footer"
 import Globe from "@/components/Globe"
 
