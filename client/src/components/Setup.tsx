@@ -83,15 +83,13 @@ const Setup = (globe_latitude, globe_longitude) => {
     const { selectedDataset, selectedYears, selectedIntervals } = data;
     setIsLoading(true);
 
-    fetch('http://127.0.0.1:5000/run_script', {
+    fetch('http://127.0.0.1:5000/generate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        dataset: selectedDataset,
         years: selectedYears,
-        intervals: selectedIntervals,
         api_key: apiKey_selected,
         latitude: parseFloat(latitude_selected),
         longitude: parseFloat(longitude_selected),
@@ -105,7 +103,7 @@ const Setup = (globe_latitude, globe_longitude) => {
         setIsLoading(false);
       })
       .catch((error) => {
-        console.error('Error:', error);
+        console.error('YOU MESSED UP:', error);
         setIsLoading(false);
       });
   };

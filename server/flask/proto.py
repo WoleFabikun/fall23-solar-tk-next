@@ -1,14 +1,12 @@
-import shutil
-import time
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 import requests
 import pandas as pd
 import math
 import os
 import numpy as np
-from zipfile import ZipFile
 from sunpos import sunpos
+import io
 
 app = Flask(__name__)
 CORS(app)
@@ -48,7 +46,6 @@ class SolarTKMaxPowerCalculator:
         return sun_positions
     
     def compute_max_power(self, df, sun_position):
-        print("DATAFRAME", df)
         clearsky_irradiance = df.copy()
         # make the index a column called 'datetime'
         clearsky_irradiance.reset_index(inplace=True)
@@ -95,6 +92,24 @@ def load_and_concatenate_csvs(folder):
     df = pd.concat(df_list, ignore_index=True)
     return df
 
+def load_and_concatenate_csvs_from_urls(urls):
+    """Load and concatenate CSV files from a list of URLs into a single DataFrame."""
+    df_list = []
+    for url in urls:
+        try:
+            df = download_file_to_dataframe(url)
+            df_list.append(df)
+        except requests.RequestException as e:
+            print(f"Error downloading {url}: {e}")
+        except pd.errors.EmptyDataError as e:
+            print(f"No data: {url} - {e}")
+    # Concatenate all dataframes if there are any
+    if df_list:
+        concatenated_df = pd.concat(df_list, ignore_index=True)
+        return concatenated_df
+    else:
+        return pd.DataFrame()  # Return an empty DataFrame if no data was loaded
+
 
 def download_file(url, destination):
     """Download a file from a URL to a given destination."""
@@ -102,79 +117,14 @@ def download_file(url, destination):
     with open(destination, 'wb') as dfile:
         for chunk in response.iter_content(chunk_size=10 * 1024):
             dfile.write(chunk)
-    # try:
-    #     urlretrieve(url, destination)
-    # except:
-    #     print(url)
 
-
-def unzip_file(file_path, destination):
-    """Unzip a file to a given destination."""
-    with ZipFile(file_path, 'r') as zip_ref:
-        zip_ref.extractall(destination)
-
-
-def cleanup(dir):
-    """Delete temporary files after processing."""
-    shutil.rmtree(dir)
-    print("Temporary files have been cleaned up.")
-
-
-#take year as an an additional input
-def fetch_download_url(dataset_url, interval, latitude, longitude, year, api_key, email):
-    input_data = {
-        'interval': interval,
-        'to_utc': 'false',
-        "leap_day": "false",
-        'wkt': 'POINT({:.4f} {:.4f})'.format(longitude, latitude),
-        'api_key': api_key,
-        'names': int(year),
-        'email': email
-    }
-    headers = {'x-api-key': api_key}
-    # response = requests.post(BASE_URL, input_data, headers=headers)
-    response_data = requests.post(dataset_url, input_data, headers=headers)
-    response_data = get_response_json_and_handle_errors(response_data)
-    return response_data['outputs']['downloadUrl']
-
-def download_and_process_data(dataset_url, latitude, longitude, data_types, years, interval, api_key, email, tilt, orientation, dc_system_size):
-    all_data_frames = []
-
-    for year in years:
-        # year.replace(" ", "")
-        # Generate download URL for each year
-        download_url = fetch_download_url(dataset_url, data_types, interval, latitude, longitude, year, api_key, email)
-        zip_file_path = os.path.join(TEMP_DIR, "solar_data_{}.zip".format(year))
-        time.sleep(5)
-        download_file(download_url, zip_file_path)
-        unzip_file(zip_file_path, SOLAR_DATA_DIR)
-        # Load and concatenate CSVs from unzipped data
-        data_frame = load_and_concatenate_csvs(SOLAR_DATA_DIR)
-        all_data_frames.append(data_frame)
-    
-    # Combine all data frames into one
-    combined_df = pd.concat(all_data_frames, ignore_index=True)
-    combined_df = load_and_concatenate_csvs(SOLAR_DATA_DIR)
-    combined_df['datetime'] = pd.to_datetime(combined_df[['Year', 'Month', 'Day', 'Hour', 'Minute']])
-    combined_df.drop(['Year', 'Month', 'Day', 'Hour', 'Minute'], axis=1, inplace=True)
-    combined_df.set_index('datetime', inplace=True)
-    
-    # Compute solar generation using the provided SolarTKMaxPowerCalculator class
-    gen_potential = SolarTKMaxPowerCalculator(tilt=34.5, orientation=180, dc_system_size=25)
-    sun_position = gen_potential.compute_sun_position(combined_df.index, latitude, longitude)
-    max_gen_df = gen_potential.compute_max_power(combined_df, sun_position)
-    # Merge the max_generation into the main dataframe
-    combined_df = combined_df.merge(max_gen_df, left_index=True, right_on="#time", how="left")
-    # rename max_generation
-    combined_df.rename(columns={'#time': 'datetime'}, inplace=True)
-    combined_df.set_index('datetime', inplace=True)
-    combined_df.rename(columns={'max_generation': 'Solar Generation (kW)'}, inplace=True)
-    return combined_df
-
-def generate_csv_url(csv_path):
-    return F"{TEMP_DIR}/{csv_path}"
-
-
+def download_file_to_dataframe(url):
+    """Download a file from a URL and load it into a DataFrame, skipping the first 2 rows."""
+    response = requests.get(url)
+    response.raise_for_status()  # This will raise an exception for HTTP errors
+    from io import StringIO
+    data = StringIO(response.text)
+    return pd.read_csv(data, skiprows=2)
 
 @app.route('/get_available_datasets', methods=['POST'])
 def get_available_datasets():
@@ -201,20 +151,14 @@ def get_available_datasets():
 
         data = response.json()
 
-        print("DATA: ", data)
-
         # Extract dataset options from the response and turn into an array of dataset names
         dataset_options = [dataset['displayName'] for dataset in data.get('outputs', [])]
         years = [[str(year) for year in dataset['availableYears']] for dataset in data.get('outputs')]
         intervals = [dataset['availableIntervals'] for dataset in data.get('outputs', [])]
 
-        print("Years: ", years)
-
         for dataset in data.get('outputs'):
                 for link in dataset['links']:
                     DOWNLOAD_URL[str(link['year'])] = link['link']
-        
-        print("DOWNLOAD URL: ", DOWNLOAD_URL)
 
         return jsonify({
             "data": data,
@@ -232,19 +176,14 @@ def get_available_datasets():
 def execute_script(): 
     try:
         years = request.json.get('years') 
-        dataset = request.json.get('dataset')
-        interval = request.json.get('interval')
         latitude = request.json.get('latitude')
         longitude = request.json.get('longitude')
         api_key = request.json.get('api_key')
         urls = request.json.get('urls')
         email = request.json.get('email')
 
-        # print("YEARS: ", years)
+        url_list = []
 
-        # print("URLS: ", urls)
-
-        #if you are choosing multiple years then the link for each year will need to be adjusted
         for year in years:
             year.replace(" ", "")
             # Generate download URL for each year
@@ -252,11 +191,15 @@ def execute_script():
             currURL = currURL.replace("yourapikey", api_key)
             currURL = currURL.replace("youremail", email)
 
-            # download_url = fetch_download_url(currURL, attributes, interval, latitude, longitude, year, api_key, email)
+            url_list.append(currURL)
+
             download_file(currURL, os.path.join(TEMP_DIR, "solar_data_{}.csv".format(year)))
 
         # (data processing code)
         df = load_and_concatenate_csvs(os.path.join(os.path.expanduser("~"), "temp"))
+        print("REAL: ", df)
+        print("REAL COLUMNS: ",df.columns)
+        
         df['datetime'] = pd.to_datetime(df[['Year', 'Month', 'Day', 'Hour', 'Minute']])
         df.drop(['Year', 'Month', 'Day', 'Hour', 'Minute'], axis=1, inplace=True)
         df.set_index('datetime', inplace=True)
@@ -272,11 +215,60 @@ def execute_script():
         df.rename(columns={'#time': 'datetime'}, inplace=True)
         df.set_index('datetime', inplace=True)
         df.rename(columns={'max_generation': 'Solar Generation (kWh)'}, inplace=True)
-        # cleanup()
-        # dump df to csv
+
         df.to_csv('{}_{}_solar_generation.csv'.format(latitude, longitude), index=True)
 
-        return "Solar data request executed successfully."
+        return jsonify("It worked")
+
+    except requests.RequestException as e:
+        return jsonify({'error': str(e)}), 500
+    
+# Alter the fetch_download_url function to accept a dataset parameter
+@app.route('/generate', methods=['POST'])
+def generate(): 
+    try:
+        years = request.json.get('years') 
+        latitude = request.json.get('latitude')
+        longitude = request.json.get('longitude')
+        api_key = request.json.get('api_key')
+        urls = request.json.get('urls')
+        email = request.json.get('email')
+
+        url_list = []
+
+        for year in years:
+            year.replace(" ", "")
+            # Generate download URL for each year
+            currURL = urls[year]
+            currURL = currURL.replace("yourapikey", api_key)
+            currURL = currURL.replace("youremail", email)
+
+            url_list.append(currURL)
+        
+        # New data processing code
+        dataframe = load_and_concatenate_csvs_from_urls(url_list)
+        print("TEST: ", dataframe)
+        print("TEST COLUMNS: ",dataframe.columns)
+        dataframe['datetime'] = pd.to_datetime(dataframe[['Year', 'Month', 'Day', 'Hour', 'Minute']])
+        dataframe.drop(['Year', 'Month', 'Day', 'Hour', 'Minute'], axis=1, inplace=True)
+        dataframe.set_index('datetime', inplace=True)
+
+        # Compute solar generation using the provided SolarTKMaxPowerCalculator class
+        gen_potential = SolarTKMaxPowerCalculator(tilt=34.5, orientation=180, k=1.0)
+
+        sun_position = gen_potential.compute_sun_position(dataframe.index, latitude, longitude)
+        max_gen_df = gen_potential.compute_max_power(dataframe, sun_position)
+
+        # Merge the max_generation into the main dataframe
+        dataframe = dataframe.merge(max_gen_df, left_index=True, right_on="#time", how="left")
+        # rename max_generation
+        dataframe.rename(columns={'#time': 'datetime'}, inplace=True)
+        dataframe.set_index('datetime', inplace=True)
+        dataframe.rename(columns={'max_generation': 'Solar Generation (kWh)'}, inplace=True)
+
+        print("ALTERED TEST: ", dataframe)
+
+        return jsonify("It worked")
 
     except requests.RequestException as e:
         return jsonify({'error': str(e)}), 500
@@ -299,3 +291,73 @@ def get_response_json_and_handle_errors(response):
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+
+
+
+
+
+
+# def download_and_process_data(dataset_url, latitude, longitude, data_types, years, interval, api_key, email, tilt, orientation, dc_system_size):
+#     all_data_frames = []
+
+#     for year in years:
+#         # year.replace(" ", "")
+#         # Generate download URL for each year
+#         download_url = fetch_download_url(dataset_url, data_types, interval, latitude, longitude, year, api_key, email)
+#         zip_file_path = os.path.join(TEMP_DIR, "solar_data_{}.zip".format(year))
+#         time.sleep(5)
+#         download_file(download_url, zip_file_path)
+#         unzip_file(zip_file_path, SOLAR_DATA_DIR)
+#         # Load and concatenate CSVs from unzipped data
+#         data_frame = load_and_concatenate_csvs(SOLAR_DATA_DIR)
+#         all_data_frames.append(data_frame)
+    
+#     # Combine all data frames into one
+#     combined_df = pd.concat(all_data_frames, ignore_index=True)
+#     combined_df = load_and_concatenate_csvs(SOLAR_DATA_DIR)
+#     combined_df['datetime'] = pd.to_datetime(combined_df[['Year', 'Month', 'Day', 'Hour', 'Minute']])
+#     combined_df.drop(['Year', 'Month', 'Day', 'Hour', 'Minute'], axis=1, inplace=True)
+#     combined_df.set_index('datetime', inplace=True)
+    
+#     # Compute solar generation using the provided SolarTKMaxPowerCalculator class
+#     gen_potential = SolarTKMaxPowerCalculator(tilt=34.5, orientation=180, dc_system_size=25)
+#     sun_position = gen_potential.compute_sun_position(combined_df.index, latitude, longitude)
+#     max_gen_df = gen_potential.compute_max_power(combined_df, sun_position)
+#     # Merge the max_generation into the main dataframe
+#     combined_df = combined_df.merge(max_gen_df, left_index=True, right_on="#time", how="left")
+#     # rename max_generation
+#     combined_df.rename(columns={'#time': 'datetime'}, inplace=True)
+#     combined_df.set_index('datetime', inplace=True)
+#     combined_df.rename(columns={'max_generation': 'Solar Generation (kW)'}, inplace=True)
+#     return combined_df
+
+# def generate_csv_url(csv_path):
+#     return F"{TEMP_DIR}/{csv_path}"
+
+# def unzip_file(file_path, destination):
+#     """Unzip a file to a given destination."""
+#     with ZipFile(file_path, 'r') as zip_ref:
+#         zip_ref.extractall(destination)
+
+# def cleanup(dir):
+#     """Delete temporary files after processing."""
+#     shutil.rmtree(dir)
+#     print("Temporary files have been cleaned up.")
+
+# #take year as an an additional input
+# def fetch_download_url(dataset_url, interval, latitude, longitude, year, api_key, email):
+#     input_data = {
+#         'interval': interval,
+#         'to_utc': 'false',
+#         "leap_day": "false",
+#         'wkt': 'POINT({:.4f} {:.4f})'.format(longitude, latitude),
+#         'api_key': api_key,
+#         'names': int(year),
+#         'email': email
+#     }
+#     headers = {'x-api-key': api_key}
+#     # response = requests.post(BASE_URL, input_data, headers=headers)
+#     response_data = requests.post(dataset_url, input_data, headers=headers)
+#     response_data = get_response_json_and_handle_errors(response_data)
+#     return response_data['outputs']['downloadUrl']
