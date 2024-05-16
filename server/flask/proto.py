@@ -6,7 +6,6 @@ import math
 import os
 import numpy as np
 from sunpos import sunpos
-import io
 
 app = Flask(__name__)
 CORS(app)
@@ -266,9 +265,10 @@ def generate():
         dataframe.set_index('datetime', inplace=True)
         dataframe.rename(columns={'max_generation': 'Solar Generation (kWh)'}, inplace=True)
 
-        print("ALTERED TEST: ", dataframe)
+        # Convert DataFrame to a list of dictionaries for JSON serialization
+        result_json = dataframe.reset_index().to_dict('records')
 
-        return jsonify("It worked")
+        return jsonify(result_json)
 
     except requests.RequestException as e:
         return jsonify({'error': str(e)}), 500

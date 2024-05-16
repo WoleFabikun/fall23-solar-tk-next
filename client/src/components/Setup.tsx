@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { ProfileForm } from './ProfileForm';
 import { DatasetForm } from './DatasetForm';
-import { set } from 'react-hook-form';
+import { SolarDataTable, SolarData} from './SolarDataTable';
 
 const Setup = (globe_latitude, globe_longitude) => {
   const [datasetOptions, setDatasetOptions] = useState<string[]>([]);
@@ -15,6 +15,7 @@ const Setup = (globe_latitude, globe_longitude) => {
   const [urls, setUrls] = useState<string[]>([]);
   const [email, setEmail] = useState<string>('');
   const [loading, setIsLoading] = useState(false);
+  const [solarData, setSolarData] = useState<SolarData[]>([]);
 
   useEffect(() => {
     if (globe_latitude && globe_longitude) {
@@ -56,11 +57,6 @@ const Setup = (globe_latitude, globe_longitude) => {
       .then((responseData) => {
         setIsLoading(false);
         const { data, dataset_options, years, intervals, download_url } = responseData;
-        console.log('Dataset Options:', dataset_options);
-        console.log('Years:', years);
-        console.log('Intervals:', intervals);
-        console.log('RESPONSE:', data)
-        console.log('Download URLs:', download_url)
 
         setDatasetOptions(dataset_options);
         setYears(years);
@@ -101,6 +97,8 @@ const Setup = (globe_latitude, globe_longitude) => {
       .then((responseData) => {
         console.log('Response:', responseData);
         setIsLoading(false);
+        // Set the solar data for rendering in the table
+        setSolarData(responseData);
       })
       .catch((error) => {
         console.error('YOU MESSED UP:', error);
@@ -109,7 +107,7 @@ const Setup = (globe_latitude, globe_longitude) => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen">
+    <div className="flex flex-col items-center justify-center min-h-screen w-full h-full px-4 py-2">
       {datasetOptions.length === 0 ? (
         <ProfileForm 
         onSubmit={handleProfileFormSubmit} 
@@ -118,13 +116,17 @@ const Setup = (globe_latitude, globe_longitude) => {
         loading = {loading}
         />
       ) : (
-        <DatasetForm
-          onSubmit={handleDatasetFormSubmit}
-          datasetOptions={datasetOptions}
-          years={years}
-          intervals={intervals}
-          loading={loading}
-        />
+        solarData.length > 0 ? (
+          <SolarDataTable data={solarData} />
+        ) : (
+          <DatasetForm
+            onSubmit={handleDatasetFormSubmit}
+            datasetOptions={datasetOptions}
+            years={years}
+            intervals={intervals}
+            loading={loading}
+          />
+        )
       )}
     </div>
   );

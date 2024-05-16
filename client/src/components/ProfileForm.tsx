@@ -40,9 +40,6 @@ type ProfileFormProps = {
 };
 
 export function ProfileForm({ onSubmit, defaultLatitude, defaultLongitude, loading }: ProfileFormProps) {
-  console.log("LATTYYYYY",defaultLatitude);
-  console.log("LONGYYYYY",defaultLongitude);
-  console.log("LOADING",loading);
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
